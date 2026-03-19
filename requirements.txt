@@ -1,0 +1,8 @@
+gradio>=4.0
+openai>=1.0
+duckduckgo-search>=6.0
+beautifulsoup4>=4.12
+requests>=2.31
+folium>=0.15
+geocoder>=1.38
+python-dotenv>=1.0
