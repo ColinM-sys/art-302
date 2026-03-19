@@ -55,6 +55,17 @@ def web_search(query: str, max_results: int = 5) -> list[dict]:
         return [{"title": "Search error", "body": str(e), "href": ""}]
 
 
+def image_search(query: str) -> str | None:
+    """Search for an image URL using DuckDuckGo images. Returns first thumbnail URL."""
+    try:
+        results = list(DDGS().images(query, max_results=1))
+        if results:
+            return results[0].get("thumbnail") or results[0].get("image")
+    except Exception:
+        pass
+    return None
+
+
 def scrape_url(url: str, max_chars: int = 3000) -> str:
     """Scrape text content from a URL."""
     try:
@@ -424,8 +435,13 @@ def build_art_map(art_items: list[dict], center_lat: float, center_lng: float, c
         art_type = item.get("art_type", "other")
         color = colors.get(art_type, "#95a5a6")
 
+        img_tag = ""
+        if item.get("image_url"):
+            img_tag = f'<img src="{item["image_url"]}" style="width:100%;max-height:120px;object-fit:cover;border-radius:6px;margin-bottom:6px;" onerror="this.style.display=\'none\'" />'
+
         popup_html = f"""
         <div style="width:280px;font-family:Arial,sans-serif;">
+            {img_tag}
             <h4 style="margin:0 0 5px;color:{color};">{item.get('name', 'Untitled')}</h4>
             <p style="margin:2px 0;"><b>Artist:</b> {item.get('artist', 'Unknown')}</p>
             <p style="margin:2px 0;"><b>Type:</b> {art_type.replace('_', ' ').title()}</p>
@@ -591,9 +607,26 @@ def discover_art(city: str, art_types: list[str], progress=gr.Progress()) -> tup
     log.append(f"\n**Geocoded {geocoded_count}/{len(art_items)} locations**")
     log.append("---")
 
-    # Step 5: Build map
+    # Step 5: Fetch images
+    progress(0.85, desc="Finding art images...")
+    log.append("### Step 5: Image Search")
+    img_count = 0
+    for item in art_items:
+        name = item.get("name", "")
+        artist = item.get("artist", "")
+        city_name = city.split(",")[0].strip()
+        query = f"{name} {artist} {city_name} art mural"
+        url = image_search(query)
+        if url:
+            item["image_url"] = url
+            img_count += 1
+            log.append(f"  - Found image: {name[:40]}")
+    log.append(f"**Found {img_count}/{len(art_items)} images**")
+    log.append("---")
+
+    # Step 6: Build map
     progress(0.9, desc="Building interactive map...")
-    log.append("### Step 5: Building Interactive Map")
+    log.append("### Step 6: Building Interactive Map")
 
     discovered_art = art_items
     map_html = build_art_map(art_items, center_lat, center_lng, city)
@@ -601,37 +634,46 @@ def discover_art(city: str, art_types: list[str], progress=gr.Progress()) -> tup
     elapsed = time.time() - start
     log.append(f"**Map generated in {elapsed:.1f}s with {len(art_items)} markers**")
 
-    # Build summary
-    summary_md = f"### Discovered {len(art_items)} Art Pieces in {city}\n\n"
+    # Build summary as HTML with images
+    colors = {
+        "mural": "#e74c3c", "sculpture": "#3498db", "installation": "#9b59b6",
+        "street_art": "#e67e22", "gallery": "#2ecc71", "mosaic": "#f39c12", "other": "#95a5a6",
+    }
     type_counts = {}
     for item in art_items:
         t = item.get("art_type", "other")
         type_counts[t] = type_counts.get(t, 0) + 1
 
-    if type_counts:
-        summary_md += "| Type | Count |\n|------|-------|\n"
-        for t, c in sorted(type_counts.items(), key=lambda x: -x[1]):
-            summary_md += f"| {t.replace('_', ' ').title()} | {c} |\n"
-        summary_md += "\n"
+    summary_html = f'<h3 style="margin:0 0 10px;">Discovered {len(art_items)} Art Pieces</h3>'
+    summary_html += '<div style="margin-bottom:12px;">'
+    for t, c in sorted(type_counts.items(), key=lambda x: -x[1]):
+        color = colors.get(t, "#95a5a6")
+        summary_html += f'<span style="display:inline-block;padding:3px 10px;border-radius:12px;background:{color};color:white;font-size:0.8rem;margin:2px;">{t.replace("_"," ").title()}: {c}</span> '
+    summary_html += '</div>'
 
-    summary_md += "### Art Directory\n\n"
     for i, item in enumerate(art_items, 1):
         name = item.get('name', 'Untitled')
         artist = item.get('artist', 'Unknown')
         art_type = item.get('art_type', 'other').replace('_', ' ').title()
         loc = item.get('location', 'N/A')
-        desc = item.get('description', '')[:120]
-        # Avoid repeating info already in the name
-        summary_md += f"**{i}. {name}**\n"
+        desc = item.get('description', '')[:100]
+        img_url = item.get('image_url', '')
+        color = colors.get(item.get('art_type', 'other'), '#95a5a6')
+
+        summary_html += f'<div style="border:1px solid #e0e0e0;border-radius:10px;padding:10px;margin-bottom:8px;border-left:4px solid {color};">'
+        if img_url:
+            summary_html += f'<img src="{img_url}" style="width:100%;max-height:140px;object-fit:cover;border-radius:8px;margin-bottom:6px;" onerror="this.style.display=\'none\'" />'
+        summary_html += f'<b style="font-size:0.95rem;">{i}. {name}</b><br>'
         if artist and artist.lower() != 'unknown':
-            summary_md += f"- Artist: {artist}\n"
-        summary_md += f"- {art_type}"
-        if loc and loc.lower() not in name.lower():
-            summary_md += f" | {loc}"
-        summary_md += "\n"
-        if desc and desc.lower() not in name.lower():
-            summary_md += f"- {desc}\n"
-        summary_md += "\n"
+            summary_html += f'<span style="color:#555;font-size:0.85rem;">by {artist}</span><br>'
+        summary_html += f'<span style="font-size:0.8rem;color:{color};">{art_type}</span>'
+        if loc:
+            summary_html += f' <span style="font-size:0.8rem;color:#888;">| {loc}</span>'
+        if desc:
+            summary_html += f'<p style="margin:4px 0 0;font-size:0.8rem;color:#666;">{desc}</p>'
+        summary_html += '</div>'
+
+    summary_md = summary_html
 
     # Update session metrics
     session_metrics["queries"] += 1
@@ -898,7 +940,7 @@ with gr.Blocks(css=CUSTOM_CSS, title="Art 302 — We'll Take You to the Art") as
                 value="<div style='height:550px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#f0f0f0,#e8e8e8);border-radius:12px;color:#888;font-size:1.3rem;'>Select a state & city, choose art types, then click <b>Discover Art</b></div>",
             )
         with gr.Column(scale=1):
-            art_summary = gr.Markdown(label="Discovered Art", value="*Art directory will appear here after search...*")
+            art_summary = gr.HTML(label="Discovered Art", value='<div style="padding:20px;color:#888;text-align:center;">Art directory will appear here after search...</div>')
 
     with gr.Accordion("Agent Pipeline Log", open=False):
         art_log = gr.Markdown(label="Pipeline Log")
