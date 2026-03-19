@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Art 302 — Hackathon Presentation</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0a; color: #fff; overflow: hidden; }
+
+  .slide {
+    display: none; width: 100vw; height: 100vh;
+    padding: 60px 80px; flex-direction: column; justify-content: center;
+  }
+  .slide.active { display: flex; }
+
+  h1 { font-size: 4rem; font-weight: 900; line-height: 1.1; margin-bottom: 20px; }
+  h2 { font-size: 2.8rem; font-weight: 800; margin-bottom: 30px; }
+  h3 { font-size: 1.8rem; font-weight: 600; margin-bottom: 20px; color: #aaa; }
+  p, li { font-size: 1.5rem; line-height: 1.6; color: #ccc; }
+  li { margin-bottom: 12px; list-style: none; padding-left: 30px; position: relative; }
+  li::before { content: ''; position: absolute; left: 0; top: 12px; width: 12px; height: 12px; border-radius: 50%; }
+  ul { margin-top: 20px; }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #e74c3c, #f39c12, #9b59b6);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .nvidia-green { color: #76b900; }
+  .accent { color: #f39c12; }
+
+  .slide-1 li::before { background: #e74c3c; }
+  .slide-2 li::before { background: #76b900; }
+  .slide-3 li::before { background: #3498db; }
+  .slide-4 li::before { background: #9b59b6; }
+  .slide-5 li::before { background: #f39c12; }
+  .slide-6 li::before { background: #e74c3c; }
+
+  .badge {
+    display: inline-block; padding: 8px 20px; border-radius: 25px;
+    font-size: 1rem; font-weight: 700; margin: 5px;
+  }
+  .badge-green { background: #76b900; color: #000; }
+  .badge-blue { background: #1a73e8; }
+  .badge-orange { background: #e65100; }
+  .badge-red { background: #e74c3c; }
+
+  .arch-flow {
+    display: flex; align-items: center; gap: 15px;
+    margin: 30px 0; flex-wrap: wrap;
+  }
+  .arch-box {
+    background: #1a1a2e; border: 2px solid #333; border-radius: 15px;
+    padding: 20px 25px; text-align: center; min-width: 160px;
+  }
+  .arch-box h4 { font-size: 1.1rem; margin-bottom: 5px; }
+  .arch-box p { font-size: 0.9rem; color: #888; }
+  .arch-arrow { font-size: 2rem; color: #76b900; }
+  .arch-box.nano { border-color: #76b900; }
+  .arch-box.super { border-color: #1a73e8; }
+  .arch-box.web { border-color: #e65100; }
+  .arch-box.map { border-color: #e74c3c; }
+
+  .slide-counter {
+    position: fixed; bottom: 20px; right: 30px;
+    font-size: 0.9rem; color: #555;
+  }
+
+  .tagline { font-size: 1.8rem; color: #888; font-style: italic; margin-top: 10px; }
+
+  .two-col { display: flex; gap: 60px; margin-top: 20px; }
+  .two-col > div { flex: 1; }
+
+  .demo-note {
+    margin-top: 40px; padding: 20px 30px;
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    border-radius: 15px; border-left: 4px solid #76b900;
+    font-size: 1.3rem;
+  }
+
+  .built-with {
+    display: flex; gap: 30px; margin-top: 30px; flex-wrap: wrap;
+  }
+  .built-item {
+    background: #1a1a2e; border-radius: 12px; padding: 20px;
+    flex: 1; min-width: 200px; text-align: center;
+  }
+  .built-item h4 { font-size: 1.2rem; margin-bottom: 8px; }
+  .built-item p { font-size: 0.95rem; color: #888; }
+
+  kbd {
+    background: #333; border: 1px solid #555; border-radius: 5px;
+    padding: 3px 10px; font-size: 0.9rem; color: #76b900;
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Title -->
+<div class="slide slide-1 active" id="s1">
+  <h1><span class="gradient-text">Art 302</span></h1>
+  <p class="tagline">We'll take you to the art.</p>
+  <p style="font-size:1.3rem; color:#888; margin-top:30px;">AI-Powered Local Art Discovery Platform</p>
+  <div style="margin-top:30px;">
+    <span class="badge badge-green">NVIDIA Nemotron</span>
+    <span class="badge badge-blue">Multi-Agent RAG</span>
+    <span class="badge badge-orange">Live Web Search</span>
+    <span class="badge badge-red">Interactive Maps</span>
+  </div>
+  <p style="font-size:1rem; color:#555; margin-top:40px;">Shortest Hackathon @ GTC 2026 &nbsp;|&nbsp; Colin McDougall</p>
+</div>
+
+<!-- SLIDE 2: Problem -->
+<div class="slide slide-2" id="s2">
+  <h3>The Problem</h3>
+  <h2>Local art is <span class="accent">invisible</span></h2>
+  <ul>
+    <li>Murals, street art, and public installations have no central directory</li>
+    <li>Local artists get zero discoverability — no SEO, no listings</li>
+    <li>Tourists and residents miss incredible art just blocks away</li>
+    <li>Existing tools (Google Maps, Yelp) weren't built for art discovery</li>
+  </ul>
+</div>
+
+<!-- SLIDE 3: Solution -->
+<div class="slide slide-3" id="s3">
+  <h3>The Solution</h3>
+  <h2><span class="gradient-text">Art 302</span> — AI agents find the art for you</h2>
+  <ul>
+    <li>Pick any city + state — AI agents search the entire web</li>
+    <li>Nemotron extracts art names, artists, locations, and descriptions</li>
+    <li>Every piece is geocoded and plotted on an interactive map</li>
+    <li>Image previews fetched automatically — in sidebar and map popups</li>
+    <li>Full pipeline log shows every agent decision transparently</li>
+  </ul>
+</div>
+
+<!-- SLIDE 4: Architecture -->
+<div class="slide slide-4" id="s4">
+  <h3>Architecture</h3>
+  <h2>Dual-Model <span class="nvidia-green">Nemotron</span> Agent Pipeline</h2>
+  <div class="arch-flow">
+    <div class="arch-box">
+      <h4>User Input</h4>
+      <p>City + Art Types</p>
+    </div>
+    <span class="arch-arrow">&#8594;</span>
+    <div class="arch-box nano">
+      <h4 class="nvidia-green">Nano 9B</h4>
+      <p>Router Agent</p>
+    </div>
+    <span class="arch-arrow">&#8594;</span>
+    <div class="arch-box web">
+      <h4 style="color:#e65100;">Web RAG</h4>
+      <p>Search + Scrape</p>
+    </div>
+    <span class="arch-arrow">&#8594;</span>
+    <div class="arch-box nano">
+      <h4 class="nvidia-green">Nano 9B</h4>
+      <p>Art Extractor</p>
+    </div>
+    <span class="arch-arrow">&#8594;</span>
+    <div class="arch-box map">
+      <h4 style="color:#e74c3c;">Map + Images</h4>
+      <p>Folium + DDG</p>
+    </div>
+  </div>
+  <div class="two-col" style="margin-top:30px;">
+    <div>
+      <h4 class="nvidia-green" style="margin-bottom:10px;">Nemotron Nano 9B</h4>
+      <p style="font-size:1.1rem;">Fast routing, query planning, structured JSON extraction from raw web text</p>
+    </div>
+    <div>
+      <h4 style="color:#1a73e8; margin-bottom:10px;">Nemotron Super 49B</h4>
+      <p style="font-size:1.1rem;">Deep research synthesis, data analysis, comparison reasoning</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5: Demo -->
+<div class="slide slide-5" id="s5">
+  <h3>Live Demo</h3>
+  <h2><span class="gradient-text">Let's discover some art</span></h2>
+  <div class="demo-note">
+    <p><span class="nvidia-green">&#9654;</span> &nbsp;Switching to the live app...</p>
+    <p style="font-size:1rem; color:#888; margin-top:10px;">localhost:7860</p>
+  </div>
+  <ul style="margin-top:30px;">
+    <li>Search any U.S. city for murals, sculptures, street art</li>
+    <li>Watch the agent pipeline log in real-time</li>
+    <li>Click map markers for photos and artist details</li>
+    <li>Also: Research tab, Data Analysis, AI Chat, Comparison tool</li>
+  </ul>
+</div>
+
+<!-- SLIDE 6: Tech Stack -->
+<div class="slide slide-6" id="s6">
+  <h3>Built With</h3>
+  <h2>Tech Stack</h2>
+  <div class="built-with">
+    <div class="built-item">
+      <h4 class="nvidia-green">NVIDIA Nemotron</h4>
+      <p>Nano 9B + Super 49B<br>via build.nvidia.com</p>
+    </div>
+    <div class="built-item">
+      <h4 style="color:#e65100;">Live Web RAG</h4>
+      <p>DuckDuckGo Search<br>BeautifulSoup Scraping</p>
+    </div>
+    <div class="built-item">
+      <h4 style="color:#e74c3c;">Interactive Maps</h4>
+      <p>Folium + Geocoding<br>Image Search</p>
+    </div>
+    <div class="built-item">
+      <h4 style="color:#3498db;">Gradio UI</h4>
+      <p>Multi-tab Platform<br>Real-time Progress</p>
+    </div>
+  </div>
+  <div style="margin-top:40px;">
+    <p style="font-size:1.3rem;"><span class="nvidia-green">GitHub:</span> <span style="color:#ccc;">github.com/ColinM-sys/art-302</span></p>
+    <p style="font-size:1.1rem; color:#888; margin-top:10px;">Built in 2 hours at the Shortest Hackathon @ GTC 2026</p>
+  </div>
+</div>
+
+<!-- SLIDE 7: Thank You -->
+<div class="slide" id="s7">
+  <h1><span class="gradient-text">Thank you!</span></h1>
+  <p class="tagline">Art 302 — We'll take you to the art.</p>
+  <p style="font-size:1.3rem; margin-top:30px; color:#888;">Colin McDougall</p>
+  <div style="margin-top:30px;">
+    <span class="badge badge-green">github.com/ColinM-sys/art-302</span>
+  </div>
+</div>
+
+<div class="slide-counter">
+  <span id="counter">1 / 7</span> &nbsp; <kbd>&#8592;</kbd> <kbd>&#8594;</kbd>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let current = 0;
+
+  function show(n) {
+    slides[current].classList.remove('active');
+    current = (n + slides.length) % slides.length;
+    slides[current].classList.add('active');
+    document.getElementById('counter').textContent = `${current + 1} / ${slides.length}`;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') show(current + 1);
+    if (e.key === 'ArrowLeft') show(current - 1);
+  });
+
+  // Also support click to advance
+  document.addEventListener('click', e => {
+    if (e.clientX > window.innerWidth / 2) show(current + 1);
+    else show(current - 1);
+  });
+</script>
+</body>
+</html>
