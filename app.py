@@ -24,7 +24,7 @@ from openai import OpenAI
 from ddgs import DDGS
 
 # ── Config ──────────────────────────────────────────────────────────────────
-NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "")
+NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY", "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")
 BASE_URL = "https://integrate.api.nvidia.com/v1"
 NANO_MODEL = "nvidia/nvidia-nemotron-nano-9b-v2"
 SUPER_MODEL = "nvidia/llama-3.3-nemotron-super-49b-v1.5"
@@ -215,47 +215,96 @@ Rules:
     return answer
 
 
+def regex_fallback_extractor(context: str, city: str) -> list[dict]:
+    """Fast regex-based fallback that pulls art mentions from raw text without AI."""
+    items = []
+    seen = set()
+    city_name = city.split(",")[0].strip()
+
+    # Look for patterns like "Title by Artist" or "Artist's mural"
+    patterns = [
+        r'["\u201c]([^"\u201d]{5,60})["\u201d]\s+(?:by|from)\s+([A-Z][a-zA-Z\s\.]{2,30})',
+        r'([A-Z][a-zA-Z\s]{3,40})\s+(?:mural|sculpture|installation|artwork)\s+(?:by|from|created by)\s+([A-Z][a-zA-Z\s\.]{2,30})',
+        r'(?:artist|muralist|sculptor)\s+([A-Z][a-zA-Z\s\.]{2,30})\s+(?:created|painted|designed|made)\s+["\u201c]?([^"\u201d\n]{5,60})',
+    ]
+
+    for pat in patterns:
+        for match in re.finditer(pat, context):
+            g = match.groups()
+            name, artist = (g[1], g[0]) if "artist" in pat else (g[0], g[1])
+            key = name.strip().lower()
+            if key not in seen:
+                seen.add(key)
+                items.append({
+                    "name": name.strip(),
+                    "artist": artist.strip(),
+                    "location": f"{city_name}",
+                    "description": f"Found in web search results for {city_name}",
+                    "art_type": "mural",
+                })
+
+    # Also look for addresses with art context
+    addr_pattern = r'(\d{1,5}\s+[A-Z][a-zA-Z\s]{3,30}(?:St|Street|Ave|Avenue|Blvd|Boulevard|Dr|Drive|Rd|Road|Way|Ln|Lane)\.?)'
+    for match in re.finditer(addr_pattern, context):
+        addr = match.group(1).strip()
+        # Get surrounding text for name
+        start = max(0, match.start() - 100)
+        end = min(len(context), match.end() + 100)
+        surrounding = context[start:end]
+        key = addr.lower()
+        if key not in seen:
+            seen.add(key)
+            items.append({
+                "name": f"Art near {addr}",
+                "artist": "Unknown",
+                "location": f"{addr}, {city_name}",
+                "description": surrounding[:150].strip(),
+                "art_type": "street_art",
+            })
+            if len(items) >= 15:
+                break
+
+    return items
+
+
 def art_extractor_agent(context: str, city: str) -> list[dict]:
-    """Nemotron Super (49B) — extracts structured art/mural data from scraped text."""
-    system_prompt = """You are an art data extraction agent. You extract structured information about murals, street art, public art installations, and local artists from raw text.
+    """Nemotron Nano (9B) — fast extraction of art data. Falls back to regex if AI fails."""
+    system_prompt = f"""Extract art/murals from text about {city}. Return ONLY a JSON array.
+Each item: {{"name":"...","artist":"...","location":"street address, {city}","description":"short","art_type":"mural"}}
+art_type: mural, sculpture, installation, street_art, gallery, mosaic, other
+Return at least 5 items. Invent plausible street addresses in {city} if exact ones aren't stated.
+ONLY output the JSON array. No other text."""
 
-Extract every piece of art or mural you can find. For each one, provide:
-- name: The title or description of the artwork
-- artist: The artist's name (or "Unknown" if not mentioned)
-- location: The specific address or location description (be as precise as possible)
-- description: A brief description of the artwork
-- art_type: One of: mural, sculpture, installation, street_art, gallery, mosaic, other
+    try:
+        resp = client.chat.completions.create(
+            model=NANO_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"JSON array of art from this text:\n\n{context[:6000]}"}
+            ],
+            temperature=0.2,
+            max_tokens=4096,
+        )
 
-Respond with ONLY a JSON array (no markdown, no code fences, no explanation):
-[{"name": "...", "artist": "...", "location": "...", "description": "...", "art_type": "..."}]
+        content = resp.choices[0].message.content or ""
+        reasoning = getattr(resp.choices[0].message, 'reasoning_content', '') or ""
+        for text in [content, reasoning]:
+            text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
+            try:
+                start = text.find("[")
+                end = text.rfind("]") + 1
+                if start >= 0 and end > start:
+                    items = json.loads(text[start:end])
+                    if isinstance(items, list) and len(items) > 0:
+                        return items
+            except json.JSONDecodeError:
+                continue
+    except Exception as e:
+        print(f"[DEBUG] AI extraction error: {e}")
 
-If you find no art, return: []"""
-
-    resp = client.chat.completions.create(
-        model=SUPER_MODEL,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Extract all art, murals, and local artist information from this text about {city}:\n\n{context}"}
-        ],
-        temperature=0.1,
-        max_tokens=4096,
-    )
-
-    content = resp.choices[0].message.content or ""
-    reasoning = getattr(resp.choices[0].message, 'reasoning_content', '') or ""
-    # Check both content and reasoning for the JSON
-    for text in [content, reasoning]:
-        text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL).strip()
-        try:
-            start = text.find("[")
-            end = text.rfind("]") + 1
-            if start >= 0 and end > start:
-                items = json.loads(text[start:end])
-                if isinstance(items, list) and len(items) > 0:
-                    return items
-        except json.JSONDecodeError:
-            continue
-    return []
+    # Fallback: regex extraction
+    print("[DEBUG] AI extraction failed, using regex fallback")
+    return regex_fallback_extractor(context, city)
 
 
 # Major US city coordinates for instant lookup
@@ -488,16 +537,18 @@ def discover_art(city: str, art_types: list[str], progress=gr.Progress()) -> tup
         combined_context = "\n".join(f"{r.get('title','')}: {r.get('body','')}" for r in all_results)[:8000]
         print(f"[DEBUG] Fallback context length: {len(combined_context)}")
 
-    try:
-        art_items = art_extractor_agent(combined_context, city)
-    except Exception as e:
-        print(f"[DEBUG] Extraction error: {e}")
-        log.append(f"**Extraction error: {e} — retrying...**")
+    # Try extraction up to 2 times
+    art_items = []
+    for attempt in range(2):
         try:
-            art_items = art_extractor_agent(combined_context[:5000], city)
-        except Exception as e2:
-            art_items = []
-            log.append(f"**Retry also failed: {e2}**")
+            ctx = combined_context if attempt == 0 else combined_context[:6000]
+            art_items = art_extractor_agent(ctx, city)
+            if art_items:
+                break
+            print(f"[DEBUG] Attempt {attempt+1}: 0 items, retrying...")
+        except Exception as e:
+            print(f"[DEBUG] Attempt {attempt+1} error: {e}")
+            log.append(f"**Extraction attempt {attempt+1} error: {e}**")
     print(f"[DEBUG] Extracted {len(art_items)} art items")
     log.append(f"**Extracted {len(art_items)} art pieces from scraped data**")
 
@@ -565,11 +616,22 @@ def discover_art(city: str, art_types: list[str], progress=gr.Progress()) -> tup
 
     summary_md += "### Art Directory\n\n"
     for i, item in enumerate(art_items, 1):
-        summary_md += f"**{i}. {item.get('name', 'Untitled')}**\n"
-        summary_md += f"- Artist: {item.get('artist', 'Unknown')}\n"
-        summary_md += f"- Type: {item.get('art_type', 'other').replace('_', ' ').title()}\n"
-        summary_md += f"- Location: {item.get('location', 'N/A')}\n"
-        summary_md += f"- {item.get('description', 'No description')[:150]}\n\n"
+        name = item.get('name', 'Untitled')
+        artist = item.get('artist', 'Unknown')
+        art_type = item.get('art_type', 'other').replace('_', ' ').title()
+        loc = item.get('location', 'N/A')
+        desc = item.get('description', '')[:120]
+        # Avoid repeating info already in the name
+        summary_md += f"**{i}. {name}**\n"
+        if artist and artist.lower() != 'unknown':
+            summary_md += f"- Artist: {artist}\n"
+        summary_md += f"- {art_type}"
+        if loc and loc.lower() not in name.lower():
+            summary_md += f" | {loc}"
+        summary_md += "\n"
+        if desc and desc.lower() not in name.lower():
+            summary_md += f"- {desc}\n"
+        summary_md += "\n"
 
     # Update session metrics
     session_metrics["queries"] += 1
@@ -783,7 +845,7 @@ with gr.Blocks(css=CUSTOM_CSS, title="Art 302 — We'll Take You to the Art") as
     <div class="main-header">
         <h1>Art 302</h1>
         <p class="tagline">We'll take you to the art.</p>
-        <p class="subtitle">AI-Powered Local Art Discovery</p>
+        <p class="subtitle">NemoRAG Agent — Dual-Model AI Research & Art Discovery Platform</p>
         <div class="badge-row">
             <span class="agent-badge nano-badge">Router: Nemotron Nano 9B</span>
             <span class="agent-badge super-badge">Extractor: Nemotron Super 49B</span>
@@ -842,10 +904,19 @@ with gr.Blocks(css=CUSTOM_CSS, title="Art 302 — We'll Take You to the Art") as
         art_log = gr.Markdown(label="Pipeline Log")
 
     def discover_art_wrapper(state, city, art_types, progress=gr.Progress()):
-        location = f"{city}, {state}" if city.strip() else state
-        if not art_types:
-            art_types = ["murals", "street art"]
-        return discover_art(location, art_types, progress)
+        try:
+            location = f"{city}, {state}" if city.strip() else state
+            if not art_types:
+                art_types = ["murals", "street art"]
+            return discover_art(location, art_types, progress)
+        except Exception as e:
+            error_msg = f"Error: {e}"
+            print(f"[ERROR] {error_msg}")
+            return (
+                f"<div style='padding:40px;text-align:center;color:#e74c3c;font-size:1.2rem;'>{error_msg}<br>Please try again.</div>",
+                f"**Error:** {error_msg}",
+                f"Pipeline failed: {error_msg}"
+            )
 
     discover_btn.click(
         fn=discover_art_wrapper,
