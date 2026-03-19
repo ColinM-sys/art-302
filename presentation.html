@@ -177,8 +177,37 @@
   </div>
 </div>
 
-<!-- SLIDE 5: Demo -->
+<!-- SLIDE 5: Search & Scrape -->
 <div class="slide slide-5" id="s5">
+  <h3>Under the Hood</h3>
+  <h2>Live <span class="accent">Search & Scrape</span> Pipeline</h2>
+  <div class="two-col">
+    <div>
+      <h4 style="color:#e65100; margin-bottom:15px;">Web Search (DuckDuckGo)</h4>
+      <ul>
+        <li>Generates 4 targeted queries per city<br><span style="font-size:0.9rem;color:#888;">e.g. "best murals San Jose locations guide"</span></li>
+        <li>Pulls 4 results per query = ~16 web pages</li>
+        <li>Filters out Pinterest, Wikipedia noise</li>
+      </ul>
+    </div>
+    <div>
+      <h4 style="color:#e74c3c; margin-bottom:15px;">Scraping & Extraction</h4>
+      <ul>
+        <li>BeautifulSoup scrapes each page (up to 5KB)</li>
+        <li>Strips nav, footer, scripts — pure content</li>
+        <li>Nemotron Nano 9B extracts structured JSON:<br><span style="font-size:0.9rem;color:#888;">name, artist, address, type, description</span></li>
+        <li>Regex fallback if AI extraction fails</li>
+      </ul>
+    </div>
+  </div>
+  <div style="margin-top:30px;">
+    <h4 style="color:#3498db; margin-bottom:10px;">Then: Geocode + Images</h4>
+    <p style="font-size:1.1rem;">ArcGIS geocodes each address &rarr; Folium plots markers &rarr; DuckDuckGo image search finds thumbnails for sidebar + popups</p>
+  </div>
+</div>
+
+<!-- SLIDE 6: Demo -->
+<div class="slide slide-6" id="s6">
   <h3>Live Demo</h3>
   <h2><span class="gradient-text">Let's discover some art</span></h2>
   <div class="demo-note">
@@ -193,8 +222,8 @@
   </ul>
 </div>
 
-<!-- SLIDE 6: Tech Stack -->
-<div class="slide slide-6" id="s6">
+<!-- SLIDE 7: Tech Stack -->
+<div class="slide" id="s7">
   <h3>Built With</h3>
   <h2>Tech Stack</h2>
   <div class="built-with">
@@ -221,8 +250,8 @@
   </div>
 </div>
 
-<!-- SLIDE 7: Thank You -->
-<div class="slide" id="s7">
+<!-- SLIDE 8: Thank You -->
+<div class="slide" id="s8">
   <h1><span class="gradient-text">Thank you!</span></h1>
   <p class="tagline">Art 302 — We'll take you to the art.</p>
   <p style="font-size:1.3rem; margin-top:30px; color:#888;">Colin McDonough</p>
@@ -232,7 +261,7 @@
 </div>
 
 <div class="slide-counter">
-  <span id="counter">1 / 7</span> &nbsp; <kbd>&#8592;</kbd> <kbd>&#8594;</kbd>
+  <span id="counter">1 / 8</span> &nbsp; <kbd>&#8592;</kbd> <kbd>&#8594;</kbd>
 </div>
 
 <script>
